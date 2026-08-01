@@ -1,0 +1,7 @@
+weights:
+  - Weight 1: 
+    - mean: 0.3
+    - std: 0.1
+  - Weight 2: 
+    - mean: 0.7
+    - std: 0.2
