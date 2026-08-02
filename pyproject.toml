@@ -13,10 +13,10 @@ description = "Linearly Constrained Null-Space Kernelized Movement Primitives"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [
-  { name = "Abhishek Padalkar", email = "abepadalkar@gmail.com" },
+  { name = "Abhishek Padalkar" },
 ]
 maintainers = [
-  { name = "Abhishek Padalkar", email = "abepadalkar@gmail.com" },
+  { name = "Abhishek Padalkar" },
 ]
 requires-python = ">=3.9"
 keywords = [
