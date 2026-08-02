@@ -19,6 +19,7 @@ find_package(piqp REQUIRED)
 
 add_library(gmr STATIC src/gmr.cpp)
 add_library(lc-ns-kmp::gmr ALIAS gmr)
+set_target_properties(gmr PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(gmr
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -33,6 +34,7 @@ target_link_libraries(gmr
 
 add_library(lc-ns-kmp STATIC src/lc-ns-kmp.cpp)
 add_library(lc-ns-kmp::lc-ns-kmp ALIAS lc-ns-kmp)
+set_target_properties(lc-ns-kmp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(lc-ns-kmp
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -100,3 +102,62 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/lc-ns-kmpConfigVersion.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lc-ns-kmp
 )
+
+# ---------------------------------------------------------------------------
+# Python bindings (pybind11). Enabled by -DLC_NS_KMP_BUILD_PYTHON=ON or when
+# building via scikit-build / pip.
+# ---------------------------------------------------------------------------
+option(LC_NS_KMP_BUILD_PYTHON "Build Python bindings" OFF)
+if(DEFINED SKBUILD)
+  set(LC_NS_KMP_BUILD_PYTHON ON)
+endif()
+
+if(LC_NS_KMP_BUILD_PYTHON)
+  set(PYBIND11_FINDPYTHON ON)
+  find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
+  find_package(pybind11 CONFIG QUIET)
+  if(NOT pybind11_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+      pybind11
+      GIT_REPOSITORY https://github.com/pybind/pybind11.git
+      GIT_TAG v2.13.6
+    )
+    FetchContent_MakeAvailable(pybind11)
+  endif()
+
+  pybind11_add_module(_core MODULE python/bindings/module.cpp)
+  target_link_libraries(_core PRIVATE gmr lc-ns-kmp)
+  target_compile_definitions(_core PRIVATE VERSION_INFO="${PROJECT_VERSION}")
+
+  # Embed piqp's library directory so libpiqp.so resolves at import time.
+  set(_piqp_loc "")
+  foreach(_cfg RELEASE RELWITHDEBINFO MINSIZEREL DEBUG)
+    get_target_property(_cand piqp::piqp IMPORTED_LOCATION_${_cfg})
+    if(_cand)
+      set(_piqp_loc "${_cand}")
+      break()
+    endif()
+  endforeach()
+  if(NOT _piqp_loc)
+    get_target_property(_piqp_loc piqp::piqp IMPORTED_LOCATION)
+  endif()
+  if(_piqp_loc)
+    get_filename_component(_piqp_libdir "${_piqp_loc}" DIRECTORY)
+    set_target_properties(_core PROPERTIES
+      BUILD_RPATH "${_piqp_libdir}"
+      INSTALL_RPATH "${_piqp_libdir}"
+    )
+  endif()
+
+  if(SKBUILD)
+    install(TARGETS _core DESTINATION lc_ns_kmp)
+  else()
+    # Local/dev: drop the extension next to the pure-Python package.
+    set(_lc_ns_kmp_py_dir "${CMAKE_CURRENT_SOURCE_DIR}/python/lc_ns_kmp")
+    set_target_properties(_core PROPERTIES
+      LIBRARY_OUTPUT_DIRECTORY "${_lc_ns_kmp_py_dir}"
+      RUNTIME_OUTPUT_DIRECTORY "${_lc_ns_kmp_py_dir}"
+    )
+  endif()
+endif()

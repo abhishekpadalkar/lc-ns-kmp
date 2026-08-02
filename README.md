@@ -166,8 +166,31 @@ Interactive flow: [`python/learn_gmm.ipynb`](python/learn_gmm.ipynb).
 
 ## Documentation / bindings
 
-- C++ / Python API docs (Doxygen + Sphinx) — coming soon  
-- Python bindings (pybind11) — coming soon  
+### Python bindings (pybind11)
+
+Build the extension in-tree:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=$HOME/piqp-install \
+  -DLC_NS_KMP_BUILD_PYTHON=ON
+cmake --build build -j"$(nproc)"
+```
+
+Or install the package (editable):
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+export CMAKE_PREFIX_PATH=$HOME/piqp-install   # PIQP (+ other custom deps)
+pip install -e .
+python examples/inference_python.py
+```
+
+If `import lc_ns_kmp` fails with `libpiqp.so: cannot open shared object file`, ensure PIQP was on `CMAKE_PREFIX_PATH` at build time (RPATH is embedded from that install), or set `LD_LIBRARY_PATH` to PIQP’s `lib/` directory.
+
+API: `from lc_ns_kmp import GaussianMixtureRegression, LC_NS_KMP`.
+
+C++ / Sphinx docs — coming in a later release.
 
 ## License
 
