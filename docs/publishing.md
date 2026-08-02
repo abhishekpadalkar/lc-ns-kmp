@@ -1,60 +1,38 @@
 # Publishing `lc-ns-kmp` to PyPI
 
-## One-time setup (Trusted Publisher)
+## One-time: Trusted Publisher on pypi.org
 
-No API tokens needed if you use OpenID Connect.
+1. Log in at https://pypi.org
+2. Open **Your account → Publishing**  
+   https://pypi.org/manage/account/publishing/
+3. Under **Add a new pending publisher**, enter **exactly**:
 
-### TestPyPI
+| Field | Value |
+|---|---|
+| PyPI Project Name | `lc-ns-kmp` |
+| Owner | `abhishekpadalkar` |
+| Repository name | `lc-ns-kmp` |
+| Workflow name | `wheels.yml` |
+| Environment name | `pypi` |
 
-1. Create an account on https://test.pypi.org
-2. Go to **Publishing** → **Add a new pending publisher**
-3. Fill in:
-   - PyPI project name: `lc-ns-kmp`
-   - Owner: `abhishekpadalkar`
-   - Repository: `lc-ns-kmp`
-   - Workflow: `wheels.yml`
-   - Environment: `testpypi`
-4. In GitHub: **Settings → Environments → New environment** named `testpypi`
+4. On GitHub: **Settings → Environments → New environment** named `pypi`
+5. Click **Add** on PyPI
 
-### PyPI
+Do **not** use `Wheels` or a full path like `.github/workflows/wheels.yml` for the workflow name.
 
-Same steps on https://pypi.org with environment name `pypi`.
-
-You can create the project on first upload; the pending publisher must match.
-
-## Dry-run (TestPyPI)
-
-1. Push this repo to GitHub.
-2. Actions → **Wheels** → **Run workflow** (manual dispatch).
-3. This publishes to **TestPyPI**, not PyPI.
-4. After success:
+## Publish a release
 
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ lc-ns-kmp==0.1.0
+# bump version in pyproject.toml / CMakeLists.txt if needed
+git tag v0.1.x
+git push origin v0.1.x
 ```
 
-**Note:** The **Publish to PyPI** job only runs on a version tag push (`v0.1.0`, etc.). Manual “Run workflow” never publishes to production PyPI.
+Watch **Actions → Wheels**. The **Publish to PyPI** job runs on version tags.
 
-## Production release
+Package page: https://pypi.org/project/lc-ns-kmp/
 
-1. Bump `version` in `pyproject.toml` (and `project(... VERSION ...)` in `CMakeLists.txt` if you keep them in sync).
-2. Commit, then:
+## TestPyPI (optional)
 
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-3. The **Wheels** workflow builds Linux/macOS wheels + sdist and publishes to PyPI.
-
-## Local smoke build (optional)
-
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install build
-python -m build --wheel
-pip install dist/*.whl
-python -c "from lc_ns_kmp import LC_NS_KMP; print(LC_NS_KMP(2, 8))"
-```
-
-Wheel builds fetch Eigen/jsoncpp/PIQP via CMake (`LC_NS_KMP_FETCH_DEPS`) and statically link PIQP into `_core`.
+Same form on https://test.pypi.org with Environment name `testpypi`, plus a GitHub environment `testpypi`.  
+Then: Actions → Wheels → **Run workflow** (manual).

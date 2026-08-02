@@ -1,7 +1,7 @@
 # lc-ns-kmp
 
 [![CI](https://github.com/abhishekpadalkar/lc-ns-kmp/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekpadalkar/lc-ns-kmp/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/lc-ns-kmp.svg)](https://pypi.org/project/lc-ns-kmp/)
+[![PyPI version](https://img.shields.io/pypi/v/lc-ns-kmp.svg?label=PyPI)](https://pypi.org/project/lc-ns-kmp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Linearly Constrained Null-Space Kernelized Movement Primitives** — a C++ library (with Python GMM tooling) for learning constrained trajectories from demonstrations, with optional null-space actions for guided exploration.
