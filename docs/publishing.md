@@ -25,12 +25,15 @@ You can create the project on first upload; the pending publisher must match.
 ## Dry-run (TestPyPI)
 
 1. Push this repo to GitHub.
-2. Actions → **Wheels** → **Run workflow**.
-3. After success:
+2. Actions → **Wheels** → **Run workflow** (manual dispatch).
+3. This publishes to **TestPyPI**, not PyPI.
+4. After success:
 
 ```bash
 pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ lc-ns-kmp==0.1.0
 ```
+
+**Note:** The **Publish to PyPI** job only runs on a version tag push (`v0.1.0`, etc.). Manual “Run workflow” never publishes to production PyPI.
 
 ## Production release
 
