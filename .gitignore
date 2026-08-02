@@ -20,9 +20,9 @@ __pycache__/
 *.egg-info/
 .ipynb_checkpoints/
 .pytest_cache/
-dist/
-_skbuild/
-build/
+# Build artifacts
+/dist/
+/wheelhouse/
 
 # Docs
 docs/_build/

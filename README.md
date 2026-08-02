@@ -1,6 +1,7 @@
 # lc-ns-kmp
 
 [![CI](https://github.com/abhishekpadalkar/lc-ns-kmp/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekpadalkar/lc-ns-kmp/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/lc-ns-kmp.svg)](https://pypi.org/project/lc-ns-kmp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Linearly Constrained Null-Space Kernelized Movement Primitives** — a C++ library (with Python GMM tooling) for learning constrained trajectories from demonstrations, with optional null-space actions for guided exploration.
@@ -167,7 +168,18 @@ Interactive flow: [`python/learn_gmm.ipynb`](python/learn_gmm.ipynb).
 
 ## Documentation / bindings
 
-### Python bindings (pybind11)
+### Install from PyPI (Python)
+
+Once published:
+
+```bash
+pip install lc-ns-kmp
+python -c "from lc_ns_kmp import LC_NS_KMP; print(LC_NS_KMP(2, 8))"
+```
+
+Wheels bundle the C++ extension (PIQP is statically linked into the module for wheel builds). Linux x86_64 and macOS wheels are built in CI; other platforms can install from the sdist if a C++ toolchain is available.
+
+### Python bindings (pybind11) — from source
 
 Build the extension in-tree:
 
@@ -178,18 +190,33 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
 cmake --build build -j"$(nproc)"
 ```
 
-Or install the package (editable):
+Or install the package (editable / local wheel). With `LC_NS_KMP_FETCH_DEPS=ON` (default for `pip` builds), Eigen/jsoncpp/PIQP are fetched if missing:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-export CMAKE_PREFIX_PATH=$HOME/piqp-install   # PIQP (+ other custom deps)
-pip install -e .
+pip install .
+# or: pip install -e .
 python examples/inference_python.py
+```
+
+If you use a system/shared PIQP install instead of FetchContent:
+
+```bash
+export CMAKE_PREFIX_PATH=$HOME/piqp-install
+pip install -e .
 ```
 
 If `import lc_ns_kmp` fails with `libpiqp.so: cannot open shared object file`, ensure PIQP was on `CMAKE_PREFIX_PATH` at build time (RPATH is embedded from that install), or set `LD_LIBRARY_PATH` to PIQP’s `lib/` directory.
 
 API: `from lc_ns_kmp import GaussianMixtureRegression, LC_NS_KMP`.
+
+### Publishing a release to PyPI
+
+1. Create a PyPI account and a **Trusted Publisher** for this repo (`abhishekpadalkar/lc-ns-kmp`), workflow `wheels.yml`, environment `pypi` (and optionally `testpypi`).
+2. Dry-run: GitHub → Actions → **Wheels** → **Run workflow** (publishes to TestPyPI).
+3. Release: `git tag v0.1.0 && git push origin v0.1.0` (builds wheels/sdist and publishes to PyPI).
+
+Details: [`docs/publishing.md`](docs/publishing.md).
 
 ### Documentation
 

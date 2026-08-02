@@ -11,19 +11,86 @@ name = "lc-ns-kmp"
 version = "0.1.0"
 description = "Linearly Constrained Null-Space Kernelized Movement Primitives"
 readme = "README.md"
-license = { file = "LICENSE" }
-authors = [{ name = "Abhishek Padalkar" }]
+license = { text = "MIT" }
+authors = [
+  { name = "Abhishek Padalkar", email = "abepadalkar@gmail.com" },
+]
+maintainers = [
+  { name = "Abhishek Padalkar", email = "abepadalkar@gmail.com" },
+]
 requires-python = ">=3.9"
+keywords = [
+  "robotics",
+  "learning-from-demonstration",
+  "movement-primitives",
+  "kernelized-movement-primitives",
+  "constrained-optimization",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+]
 dependencies = ["numpy>=1.24"]
 
 [project.optional-dependencies]
 dev = ["matplotlib>=3.7", "scikit-learn>=1.3", "jupyter>=1.0"]
+docs = ["sphinx>=7.0", "breathe>=4.35", "sphinx-rtd-theme>=2.0"]
+
+[project.urls]
+Homepage = "https://github.com/abhishekpadalkar/lc-ns-kmp"
+Documentation = "https://github.com/abhishekpadalkar/lc-ns-kmp#readme"
+Repository = "https://github.com/abhishekpadalkar/lc-ns-kmp"
+Issues = "https://github.com/abhishekpadalkar/lc-ns-kmp/issues"
+Paper = "https://doi.org/10.1109/LRA.2025.3566599"
 
 [tool.scikit-build]
 minimum-version = "0.10"
+cmake.version = ">=3.21"
 build-dir = "build/{wheel_tag}"
 wheel.packages = ["python/lc_ns_kmp"]
 cmake.build-type = "Release"
+sdist.include = [
+  "CMakeLists.txt",
+  "cmake/**",
+  "include/**",
+  "src/**",
+  "python/bindings/**",
+  "python/lc_ns_kmp/**",
+  "LICENSE",
+  "README.md",
+  "CITATION.cff",
+]
 
 [tool.scikit-build.cmake.define]
 LC_NS_KMP_BUILD_PYTHON = "ON"
+LC_NS_KMP_FETCH_DEPS = "ON"
+
+[tool.cibuildwheel]
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+skip = "pp* *-musllinux_* *_i686"
+test-requires = ["numpy"]
+test-command = "python -c \"from lc_ns_kmp import LC_NS_KMP, GaussianMixtureRegression; LC_NS_KMP(2, 8)\""
+# OpenMP is needed at build and runtime for the extension.
+environment = { CMAKE_BUILD_PARALLEL_LEVEL = "2" }
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+before-all = [
+  "yum install -y libomp-devel || true",
+  "dnf install -y libomp-devel || true",
+]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+environment = { MACOSX_DEPLOYMENT_TARGET = "12.0" }
