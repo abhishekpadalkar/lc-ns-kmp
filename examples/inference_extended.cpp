@@ -1,3 +1,4 @@
+// WIP: not built by default (see LC_NS_KMP_BUILD_WIP_EXAMPLES). Finish on a feature branch.
 #include <json/json.h>
 #include <iostream>
 #include <fstream>
@@ -6,6 +7,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Eigen>
 #include <chrono>
+
+using namespace lc_ns_kmp;
 
 
 static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> mu, const std::vector<Eigen::MatrixXd> sigma, std::string file_name)

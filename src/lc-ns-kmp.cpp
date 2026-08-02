@@ -7,6 +7,9 @@
 #include <Eigen/Eigen>
 #include "piqp/piqp.hpp"
 
+namespace lc_ns_kmp
+{
+
 LC_NS_KMP::LC_NS_KMP(int output_dim_, int horizon, double lambda_, double beta_, double l_)
     : output_dim(output_dim_),
       N(horizon),
@@ -48,29 +51,32 @@ Eigen::MatrixXd LC_NS_KMP::invert_block_diagonal_sigma() const
     return Sigma_inv;
 }
 
-Eigen::MatrixXd LC_NS_KMP::kernel_function(Eigen::VectorXd s1, Eigen::VectorXd s2)
+Eigen::MatrixXd LC_NS_KMP::kernel_function(const Eigen::VectorXd &s1, const Eigen::VectorXd &s2) const
 {
-    auto diff = s1 - s2;
-    double k_val = exp(-l * diff.transpose() * diff);
+    const auto diff = s1 - s2;
+    const double k_val = std::exp(-l * diff.transpose() * diff);
 
     Eigen::VectorXd v = Eigen::VectorXd::Ones(output_dim) * k_val;
     return v.matrix().asDiagonal();
 }
 
-double LC_NS_KMP::time_kernel_value(double t_i, double t_j)
+double LC_NS_KMP::time_kernel_value(double t_i, double t_j) const
 {
-    return exp(-l * std::pow((t_i - t_j), 2));
+    return std::exp(-l * std::pow((t_i - t_j), 2));
 }
 
-Eigen::MatrixXd LC_NS_KMP::extended_kernel_function(Eigen::VectorXd s1, Eigen::VectorXd s2)
+Eigen::MatrixXd LC_NS_KMP::extended_kernel_function(const Eigen::VectorXd &s1,
+                                                    const Eigen::VectorXd &s2) const
 {
-    double del = 0.0001;
-    auto t_i = s1[0];
-    auto t_j = s2[0];
-    double k_tt = time_kernel_value(t_i, t_j);
-    double k_td = (time_kernel_value(t_i, t_j + del) - k_tt) / del;
-    double k_dt = (time_kernel_value(t_i + del, t_j) - k_tt) / del;
-    double k_dd = (time_kernel_value(t_i + del, t_j + del) - time_kernel_value(t_i + del, t_j) - time_kernel_value(t_i, t_j + del) + k_tt) / (del * del);
+    const double del = 0.0001;
+    const auto t_i = s1[0];
+    const auto t_j = s2[0];
+    const double k_tt = time_kernel_value(t_i, t_j);
+    const double k_td = (time_kernel_value(t_i, t_j + del) - k_tt) / del;
+    const double k_dt = (time_kernel_value(t_i + del, t_j) - k_tt) / del;
+    const double k_dd = (time_kernel_value(t_i + del, t_j + del) - time_kernel_value(t_i + del, t_j) -
+                         time_kernel_value(t_i, t_j + del) + k_tt) /
+                        (del * del);
 
     const int half = output_dim / 2;
     Eigen::MatrixXd K_tt = Eigen::MatrixXd::Identity(half, half) * k_tt;
@@ -85,7 +91,7 @@ Eigen::MatrixXd LC_NS_KMP::extended_kernel_function(Eigen::VectorXd s1, Eigen::V
     return m;
 }
 
-int LC_NS_KMP::calculate_K(std::vector<Eigen::VectorXd> s, Eigen::VectorXd s_query)
+int LC_NS_KMP::calculate_K(const std::vector<Eigen::VectorXd> &s, const Eigen::VectorXd &s_query)
 {
     const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, 0, ", ", "\n");
 
@@ -98,13 +104,16 @@ int LC_NS_KMP::calculate_K(std::vector<Eigen::VectorXd> s, Eigen::VectorXd s_que
         k_star.block(0, output_dim * i, output_dim, output_dim) = kernel_function(s[i], s_query);
     }
 
-    std::cout << "K : " << std::endl;
-    std::cout << K.format(CSVFormat) << std::endl;
+    if (verbose_)
+    {
+        std::cout << "K : " << std::endl;
+        std::cout << K.format(CSVFormat) << std::endl;
+    }
     return 0;
 }
 
-int LC_NS_KMP::construct_matrices(std::vector<Eigen::VectorXd> mu_in,
-                                  std::vector<Eigen::MatrixXd> Sigma_in)
+int LC_NS_KMP::construct_matrices(const std::vector<Eigen::VectorXd> &mu_in,
+                                  const std::vector<Eigen::MatrixXd> &Sigma_in)
 {
     for (int i = 0; i < N; i++)
     {
@@ -114,10 +123,10 @@ int LC_NS_KMP::construct_matrices(std::vector<Eigen::VectorXd> mu_in,
     return 0;
 }
 
-int LC_NS_KMP::predict(std::vector<Eigen::VectorXd> s_star,
-                       std::vector<Eigen::VectorXd> s,
-                       std::vector<Eigen::VectorXd> mu_in,
-                       std::vector<Eigen::MatrixXd> Sigma_in,
+int LC_NS_KMP::predict(const std::vector<Eigen::VectorXd> &s_star,
+                       const std::vector<Eigen::VectorXd> &s,
+                       const std::vector<Eigen::VectorXd> &mu_in,
+                       const std::vector<Eigen::MatrixXd> &Sigma_in,
                        std::vector<Eigen::VectorXd> &eta_out,
                        std::vector<Eigen::MatrixXd> & /*sigma_out*/)
 {
@@ -143,14 +152,13 @@ int LC_NS_KMP::predict(std::vector<Eigen::VectorXd> s_star,
         Eigen::VectorXd eta = k_star * temp;
         eta_out.push_back(eta);
     }
-    std::cout << "Current state " << std::endl;
     return 0;
 }
 
-int LC_NS_KMP::predict_LC(std::vector<Eigen::VectorXd> s_star,
-                          std::vector<Eigen::VectorXd> s,
-                          std::vector<Eigen::VectorXd> mu_in,
-                          std::vector<Eigen::MatrixXd> Sigma_in,
+int LC_NS_KMP::predict_LC(const std::vector<Eigen::VectorXd> &s_star,
+                          const std::vector<Eigen::VectorXd> &s,
+                          const std::vector<Eigen::VectorXd> &mu_in,
+                          const std::vector<Eigen::MatrixXd> &Sigma_in,
                           std::vector<Eigen::VectorXd> &eta_out,
                           std::vector<Eigen::MatrixXd> & /*sigma_out*/)
 {
@@ -192,16 +200,15 @@ int LC_NS_KMP::predict_LC(std::vector<Eigen::VectorXd> s_star,
         Eigen::VectorXd eta = k_star * temp;
         eta_out.push_back(eta);
     }
-    std::cout << "Current state " << std::endl;
     return 0;
 }
 
-int LC_NS_KMP::predict_LCNS(std::vector<Eigen::VectorXd> s_star,
-                            Eigen::VectorXd xi,
-                            Eigen::VectorXd s_hat,
-                            std::vector<Eigen::VectorXd> s,
-                            std::vector<Eigen::VectorXd> mu_in,
-                            std::vector<Eigen::MatrixXd> Sigma_in,
+int LC_NS_KMP::predict_LCNS(const std::vector<Eigen::VectorXd> &s_star,
+                            const Eigen::VectorXd &xi,
+                            const Eigen::VectorXd &s_hat,
+                            const std::vector<Eigen::VectorXd> &s,
+                            const std::vector<Eigen::VectorXd> &mu_in,
+                            const std::vector<Eigen::MatrixXd> &Sigma_in,
                             std::vector<Eigen::VectorXd> &eta_out,
                             std::vector<Eigen::MatrixXd> & /*sigma_out*/)
 {
@@ -209,8 +216,14 @@ int LC_NS_KMP::predict_LCNS(std::vector<Eigen::VectorXd> s_star,
 
     construct_matrices(mu_in, Sigma_in);
 
-    std::cout << "Time taken to construct matrices: \n"
-              << std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count() << " ms\n";
+    if (verbose_)
+    {
+        std::cout << "Time taken to construct matrices: \n"
+                  << std::chrono::duration<double, std::milli>(
+                         std::chrono::high_resolution_clock::now() - start)
+                         .count()
+                  << " ms\n";
+    }
 
     start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++)
@@ -222,8 +235,14 @@ int LC_NS_KMP::predict_LCNS(std::vector<Eigen::VectorXd> s_star,
         K_hat.block(0, i * output_dim, output_dim, output_dim) = kernel_function(s_hat, s[i]);
     }
 
-    std::cout << "Time taken to compute K matrix: \n"
-              << std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count() << " ms\n";
+    if (verbose_)
+    {
+        std::cout << "Time taken to compute K matrix: \n"
+                  << std::chrono::duration<double, std::milli>(
+                         std::chrono::high_resolution_clock::now() - start)
+                         .count()
+                  << " ms\n";
+    }
 
     Eigen::MatrixXd K_gamma_Sigma = K + gamma * Sigma;
 
@@ -231,8 +250,14 @@ int LC_NS_KMP::predict_LCNS(std::vector<Eigen::VectorXd> s_star,
 
     Eigen::MatrixXd Sigma_inv = invert_block_diagonal_sigma();
     Eigen::MatrixXd A = K_gamma_Sigma.inverse(); // (K + γΣ)⁻¹
-    std::cout << "Time taken to compute inverses: \n"
-              << std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count() << " ms\n";
+    if (verbose_)
+    {
+        std::cout << "Time taken to compute inverses: \n"
+                  << std::chrono::duration<double, std::milli>(
+                         std::chrono::high_resolution_clock::now() - start)
+                         .count()
+                  << " ms\n";
+    }
 
     Eigen::MatrixXd A_quad = -0.5 * A * (K * Sigma_inv * K + gamma * K) * A;
 
@@ -249,8 +274,14 @@ int LC_NS_KMP::predict_LCNS(std::vector<Eigen::VectorXd> s_star,
 
     start = std::chrono::high_resolution_clock::now();
     Eigen::VectorXd alpha = solve_dual_qp(P, q);
-    std::cout << "Time taken to solve QP: \n"
-              << std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count() << " ms\n";
+    if (verbose_)
+    {
+        std::cout << "Time taken to solve QP: \n"
+                  << std::chrono::duration<double, std::milli>(
+                         std::chrono::high_resolution_clock::now() - start)
+                         .count()
+                  << " ms\n";
+    }
 
     start = std::chrono::high_resolution_clock::now();
     Eigen::MatrixXd temp = A * (mu + Sigma * G_bar * alpha);
@@ -268,17 +299,23 @@ int LC_NS_KMP::predict_LCNS(std::vector<Eigen::VectorXd> s_star,
         Eigen::VectorXd eta = k_star * temp + eta_ns;
         eta_out.push_back(eta);
     }
-    std::cout << "Time taken to compute predictions: \n"
-              << std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count() << " ms\n";
+    if (verbose_)
+    {
+        std::cout << "Time taken to compute predictions: \n"
+                  << std::chrono::duration<double, std::milli>(
+                         std::chrono::high_resolution_clock::now() - start)
+                         .count()
+                  << " ms\n";
+    }
     return 0;
 }
 
-int LC_NS_KMP::predict_LCNS_extended(std::vector<Eigen::VectorXd> s_star,
-                                     Eigen::VectorXd xi,
-                                     Eigen::VectorXd s_hat,
-                                     std::vector<Eigen::VectorXd> s,
-                                     std::vector<Eigen::VectorXd> mu_in,
-                                     std::vector<Eigen::MatrixXd> Sigma_in,
+int LC_NS_KMP::predict_LCNS_extended(const std::vector<Eigen::VectorXd> &s_star,
+                                     const Eigen::VectorXd &xi,
+                                     const Eigen::VectorXd &s_hat,
+                                     const std::vector<Eigen::VectorXd> &s,
+                                     const std::vector<Eigen::VectorXd> &mu_in,
+                                     const std::vector<Eigen::MatrixXd> &Sigma_in,
                                      std::vector<Eigen::VectorXd> &eta_out,
                                      std::vector<Eigen::MatrixXd> & /*sigma_out*/)
 {
@@ -288,9 +325,11 @@ int LC_NS_KMP::predict_LCNS_extended(std::vector<Eigen::VectorXd> s_star,
     {
         for (int j = 0; j < N; j++)
         {
-            K.block(output_dim * i, output_dim * j, output_dim, output_dim) = extended_kernel_function(s[i], s[j]);
+            K.block(output_dim * i, output_dim * j, output_dim, output_dim) =
+                extended_kernel_function(s[i], s[j]);
         }
-        K_hat.block(0, i * output_dim, output_dim, output_dim) = extended_kernel_function(s_hat, s[i]);
+        K_hat.block(0, i * output_dim, output_dim, output_dim) =
+            extended_kernel_function(s_hat, s[i]);
     }
 
     Eigen::MatrixXd K_gamma_Sigma = K + gamma * Sigma;
@@ -318,7 +357,8 @@ int LC_NS_KMP::predict_LCNS_extended(std::vector<Eigen::VectorXd> s_star,
 
         for (int j = 0; j < N; j++)
         {
-            k_star.block(0, output_dim * j, output_dim, output_dim) = extended_kernel_function(s_star[i], s[j]);
+            k_star.block(0, output_dim * j, output_dim, output_dim) =
+                extended_kernel_function(s_star[i], s[j]);
         }
         Eigen::MatrixXd eta_ns = (beta / gamma) * (k_hat - k_star * A * K_hat.transpose()) * xi;
 
@@ -328,10 +368,13 @@ int LC_NS_KMP::predict_LCNS_extended(std::vector<Eigen::VectorXd> s_star,
     return 0;
 }
 
-int LC_NS_KMP::add_constraints(std::vector<Eigen::VectorXd> g, Eigen::VectorXd c_in)
+int LC_NS_KMP::add_constraints(const std::vector<Eigen::VectorXd> &g, const Eigen::VectorXd &c_in)
 {
-    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, 0, ", ", "\n");
-    std::cout << c_in.format(CSVFormat) << std::endl;
+    if (verbose_)
+    {
+        const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, 0, ", ", "\n");
+        std::cout << c_in.format(CSVFormat) << std::endl;
+    }
 
     Eigen::MatrixXd G_temp = Eigen::MatrixXd::Zero(output_dim, static_cast<int>(g.size()));
     for (int i = 0; i < static_cast<int>(g.size()); i++)
@@ -355,3 +398,5 @@ int LC_NS_KMP::build_constraint_matrices(Eigen::MatrixXd &G_bar, Eigen::VectorXd
     }
     return 0;
 }
+
+} // namespace lc_ns_kmp

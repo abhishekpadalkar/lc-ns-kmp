@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: >-
+  Please cite the paper (preferred-citation) as the primary reference.
+  Cite this software entry only as a secondary reference if needed.
+type: software
+title: "lc-ns-kmp: Linearly Constrained Null-Space Kernelized Movement Primitives"
+authors:
+  - family-names: Padalkar
+    given-names: Abhishek
+    orcid: "https://orcid.org/0000-0002-3917-4767"
+license: MIT
+repository-code: "https://github.com/abhishekpadalkar/lc-ns-kmp"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Padalkar
+      given-names: Abhishek
+      orcid: "https://orcid.org/0000-0002-3917-4767"
+    - family-names: Stulp
+      given-names: Freek
+      orcid: "https://orcid.org/0000-0001-9555-9517"
+    - family-names: Neumann
+      given-names: Gerhard
+    - family-names: Silverio
+      given-names: Joao
+      orcid: "https://orcid.org/0000-0003-1428-8933"
+  title: "Towards Safe and Efficient Learning in the Wild: Guiding RL With Constrained Uncertainty-Aware Movement Primitives"
+  year: 2025
+  month: 7
+  journal: "IEEE Robotics and Automation Letters"
+  volume: 10
+  issue: 7
+  start: 6880
+  end: 6887
+  doi: "10.1109/LRA.2025.3566599"
+  url: "https://elib.dlr.de/216474"
+  issn: "2377-3766"

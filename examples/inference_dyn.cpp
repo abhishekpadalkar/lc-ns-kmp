@@ -1,3 +1,4 @@
+// WIP: lab LN middleware demo; not built on main. Finish on a feature branch.
 #include <json/json.h>
 #include <iostream>
 #include <fstream>

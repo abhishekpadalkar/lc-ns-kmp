@@ -6,15 +6,11 @@
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
-#include <Eigen/Eigen>
-#include <json/json.h>
 
 #include "gmr.hpp"
 #include "lc-ns-kmp.hpp"
 
-static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> &mu,
-                              const std::vector<Eigen::MatrixXd> &sigma,
-                              const std::string &file_name)
+static void dump_mu(const std::vector<Eigen::VectorXd> &mu, const std::string &file_name)
 {
     const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
     std::ofstream mu_file((file_name + "_mu.csv").c_str());
@@ -22,7 +18,15 @@ static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> &mu,
     {
         mu_file << m.transpose().format(CSVFormat) << std::endl;
     }
+}
 
+static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> &mu,
+                              const std::vector<Eigen::MatrixXd> &sigma,
+                              const std::string &file_name)
+{
+    dump_mu(mu, file_name);
+
+    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
     std::ofstream sigma_file((file_name + "_sigma.csv").c_str());
     for (const auto &s : sigma)
     {
@@ -67,7 +71,7 @@ int generate_trajectory()
     } cfg;
 
     Eigen::VectorXd xi = Eigen::VectorXd::Zero(cfg.dim);
-    xi << -25.0, 0.0;
+    xi << 0.0, 0.0;
 
     if (cfg.s_hat_idx < 0 || cfg.s_hat_idx >= cfg.N)
     {
@@ -77,9 +81,9 @@ int generate_trajectory()
 
     std::cout << "Loading GMM from file: " << cfg.model << std::endl;
 
-    LC_NS_KMP kmp(cfg.dim, cfg.N, cfg.lambda, cfg.beta, cfg.l);
+    lc_ns_kmp::LC_NS_KMP kmp(cfg.dim, cfg.N, cfg.lambda, cfg.beta, cfg.l);
 
-    GaussianMixtureRegression gmr;
+    lc_ns_kmp::GaussianMixtureRegression gmr;
     if (gmr.load_gmm(cfg.model) != 0)
     {
         std::cerr << "Error loading GMM." << std::endl;
@@ -111,7 +115,7 @@ int generate_trajectory()
     kmp.add_constraints(g_list, c);
 
     std::vector<Eigen::VectorXd> eta_kmp;
-    std::vector<Eigen::MatrixXd> Sigma_kmp;
+    std::vector<Eigen::MatrixXd> Sigma_kmp; // unused: predict_LCNS does not fill KMP covariance
     start = std::chrono::high_resolution_clock::now();
     kmp.predict_LCNS(s, xi, s[cfg.s_hat_idx], s, mu_gmr, Sigma_gmr, eta_kmp, Sigma_kmp);
     stop = std::chrono::high_resolution_clock::now();
@@ -120,7 +124,8 @@ int generate_trajectory()
               << " s\n";
 
     dump_mu_and_sigma(mu_gmr, Sigma_gmr, cfg.gmm_out);
-    dump_mu_and_sigma(eta_kmp, Sigma_gmr, cfg.kmp_out);
+    // KMP predictive covariance is not computed yet; write means only.
+    dump_mu(eta_kmp, cfg.kmp_out);
     return 0;
 }
 

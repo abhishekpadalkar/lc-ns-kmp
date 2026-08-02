@@ -44,10 +44,15 @@ target_link_libraries(KMP
 add_executable(inference examples/inference.cpp)
 target_link_libraries(inference PRIVATE GMR KMP)
 
-add_executable(inference_extended examples/inference_extended.cpp)
-target_link_libraries(inference_extended PRIVATE GMR KMP)
+# inference_extended.cpp and inference_dyn.cpp are kept for future work on
+# separate branches; they are not built by default on main.
+option(LC_NS_KMP_BUILD_WIP_EXAMPLES "Build WIP examples (inference_extended)" OFF)
+if(LC_NS_KMP_BUILD_WIP_EXAMPLES)
+  add_executable(inference_extended examples/inference_extended.cpp)
+  target_link_libraries(inference_extended PRIVATE GMR KMP)
+endif()
 
-install(TARGETS GMR KMP inference inference_extended
+install(TARGETS GMR KMP inference
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
