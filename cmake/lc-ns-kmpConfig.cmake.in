@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(OpenMP REQUIRED)
+find_dependency(Eigen3 3.3 REQUIRED NO_MODULE)
+find_dependency(jsoncpp REQUIRED)
+find_dependency(piqp REQUIRED)
+
+include("${CMAKE_CURRENT_LIST_DIR}/lc-ns-kmpTargets.cmake")
+
+check_required_components(lc-ns-kmp)

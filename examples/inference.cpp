@@ -71,7 +71,7 @@ int generate_trajectory()
     } cfg;
 
     Eigen::VectorXd xi = Eigen::VectorXd::Zero(cfg.dim);
-    xi << 0.0, 0.0;
+    xi << 50.0, 0.0;
 
     if (cfg.s_hat_idx < 0 || cfg.s_hat_idx >= cfg.N)
     {
