@@ -161,3 +161,36 @@ if(LC_NS_KMP_BUILD_PYTHON)
     )
   endif()
 endif()
+
+# ---------------------------------------------------------------------------
+# Documentation (Sphinx; optional Doxygen XML for Breathe)
+# ---------------------------------------------------------------------------
+option(LC_NS_KMP_BUILD_DOCS "Add a 'docs' target (Sphinx)" OFF)
+if(LC_NS_KMP_BUILD_DOCS)
+  find_program(SPHINX_EXECUTABLE NAMES sphinx-build)
+  find_program(DOXYGEN_EXECUTABLE NAMES doxygen)
+  if(NOT SPHINX_EXECUTABLE)
+    message(FATAL_ERROR "LC_NS_KMP_BUILD_DOCS=ON but sphinx-build was not found")
+  endif()
+  if(DOXYGEN_EXECUTABLE)
+    add_custom_target(docs
+      COMMAND ${CMAKE_COMMAND} -E echo "Running Doxygen"
+      COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Doxyfile
+      COMMAND ${SPHINX_EXECUTABLE} -b html
+              ${CMAKE_SOURCE_DIR}/docs
+              ${CMAKE_SOURCE_DIR}/docs/_build/html
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      COMMENT "Building Sphinx HTML documentation"
+      VERBATIM
+    )
+  else()
+    add_custom_target(docs
+      COMMAND ${SPHINX_EXECUTABLE} -b html
+              ${CMAKE_SOURCE_DIR}/docs
+              ${CMAKE_SOURCE_DIR}/docs/_build/html
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      COMMENT "Building Sphinx HTML documentation (no Doxygen)"
+      VERBATIM
+    )
+  endif()
+endif()

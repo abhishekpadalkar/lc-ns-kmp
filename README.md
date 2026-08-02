@@ -190,7 +190,16 @@ If `import lc_ns_kmp` fails with `libpiqp.so: cannot open shared object file`, e
 
 API: `from lc_ns_kmp import GaussianMixtureRegression, LC_NS_KMP`.
 
-C++ / Sphinx docs — coming in a later release.
+### Documentation
+
+```bash
+pip install -r docs/requirements.txt
+# optional: doxygen Doxyfile   # enables Breathe C++ autodoc
+chmod +x docs/build.sh && ./docs/build.sh
+# open docs/_build/html/index.html
+```
+
+Or: `cmake -DLC_NS_KMP_BUILD_DOCS=ON …` then `cmake --build build --target docs`.
 
 ## License
 
