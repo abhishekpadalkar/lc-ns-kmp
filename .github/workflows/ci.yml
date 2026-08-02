@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PIQP_PREFIX: ${{ github.workspace }}/.deps/piqp-install
+  PIQP_REF: v0.6.3
+
+jobs:
+  build-and-test:
+    name: Ubuntu build + smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            git \
+            libeigen3-dev \
+            libjsoncpp-dev \
+            libomp-dev \
+            python3 \
+            python3-dev \
+            python3-pip \
+            python3-venv
+
+      - name: Cache PIQP install
+        id: cache-piqp
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PIQP_PREFIX }}
+          key: piqp-${{ env.PIQP_REF }}-${{ runner.os }}-shared
+
+      - name: Build and install PIQP
+        if: steps.cache-piqp.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "${PIQP_REF}" https://github.com/PREDICT-EPFL/piqp.git /tmp/piqp
+          cmake -S /tmp/piqp -B /tmp/piqp/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${PIQP_PREFIX}" \
+            -DBUILD_TESTS=OFF \
+            -DBUILD_BENCHMARKS=OFF
+          cmake --build /tmp/piqp/build -j"$(nproc)"
+          cmake --install /tmp/piqp/build
+
+      - name: Configure lc-ns-kmp
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${PIQP_PREFIX}" \
+            -DLC_NS_KMP_BUILD_PYTHON=ON
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Run C++ inference smoke test
+        working-directory: build
+        run: |
+          ./inference
+          test -f ../examples/gmm_mu.csv
+          test -f ../examples/kmp_mu.csv
+
+      - name: Run cmake consumer smoke test
+        run: |
+          cmake --install build --prefix "${GITHUB_WORKSPACE}/.deps/lc-ns-kmp-install"
+          cmake -S examples/cmake_consumer -B build-consumer \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/.deps/lc-ns-kmp-install;${PIQP_PREFIX}"
+          cmake --build build-consumer -j"$(nproc)"
+          ./build-consumer/consumer
+
+      - name: Python bindings smoke test
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -U pip
+          .venv/bin/pip install numpy
+          export PYTHONPATH="${GITHUB_WORKSPACE}/python"
+          export LD_LIBRARY_PATH="${PIQP_PREFIX}/lib:${PIQP_PREFIX}/lib64:${LD_LIBRARY_PATH:-}"
+          .venv/bin/python -c "from lc_ns_kmp import LC_NS_KMP, GaussianMixtureRegression; print('import ok')"
+          .venv/bin/python examples/inference_python.py --xi -25 0
+
+      - name: Sphinx docs smoke test
+        run: |
+          .venv/bin/pip install -r docs/requirements.txt
+          .venv/bin/python -m sphinx -b html docs docs/_build/html
+          test -f docs/_build/html/index.html
