@@ -113,11 +113,11 @@ static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> mu, const std::
 
 //     cs << -6, -6, -0.8, -0.8;
 
-//     kmp_obj.add_constriants(gs, cs);
+//     kmp_obj.add_constraints(gs, cs);
 
-//     Eigen::VectorXd nsa(6);
-//     nsa << 0, 0, 0, 0, 0, 0;
-//     kmp_obj.predict_LCNS_extended_acc(obs, nsa, obs[1], obs, pred, pred_sigma, p, sp);
+//     Eigen::VectorXd xi(6);
+//     xi << 0, 0, 0, 0, 0, 0;
+//     kmp_obj.predict_LCNS_extended_acc(obs, xi, obs[1], obs, pred, pred_sigma, p, sp);
 //     kmp_pred = p;
 
 //     stop = std::chrono::high_resolution_clock::now();
@@ -178,7 +178,7 @@ static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> mu, const std::
 
 //     cs << -6, -6, -0.8, -0.8;
 
-//     kmp_obj.add_constriants(gs, cs);
+//     kmp_obj.add_constraints(gs, cs);
 //     std::vector<Eigen::VectorXd> kmp_pred;
 
 //     auto start = std::chrono::high_resolution_clock::now();
@@ -213,19 +213,19 @@ static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> mu, const std::
 //         std::vector<Eigen::MatrixXd> sp;
 
 
-//         // Eigen::VectorXd nsa(6);
-//         // nsa << 0, 0, 0, 0, 0, 0;
+//         // Eigen::VectorXd xi(6);
+//         // xi << 0, 0, 0, 0, 0, 0;
 
-//         Eigen::VectorXd nsa = Eigen::VectorXd::Random(6)*300;
-//         nsa[0] = 0;
-//         nsa[1] = 0;
-//         nsa[2] = 0;
-//         nsa[3] = 0;
-//         nsa[4] = 0;
-//         nsa[5] = 0;
+//         Eigen::VectorXd xi = Eigen::VectorXd::Random(6)*300;
+//         xi[0] = 0;
+//         xi[1] = 0;
+//         xi[2] = 0;
+//         xi[3] = 0;
+//         xi[4] = 0;
+//         xi[5] = 0;
 //         std::vector<Eigen::VectorXd> current_state;
 //         current_state.push_back(obs[1]);
-//         kmp_obj.predict_LCNS_extended_acc(current_state, nsa, obs[1], obs, pred, pred_sigma, p, sp);
+//         kmp_obj.predict_LCNS_extended_acc(current_state, xi, obs[1], obs, pred, pred_sigma, p, sp);
 //         kmp_pred.push_back(p[0]);
 //     }
 
@@ -339,10 +339,10 @@ int bottle_neck_svc_provider(int argc, char **argv)
     // cs << -0.002, -0.002, -2, -2;
     cs << -0.6;
 
-    kmp_obj.add_constriants(gs, cs);
+    kmp_obj.add_constraints(gs, cs);
 
-    Eigen::VectorXd nsa(2);
-    nsa << 0, 0;
+    Eigen::VectorXd xi(2);
+    xi << 0, 0;
     std::vector<Eigen::VectorXd> current_state;
     for (size_t i = 0; i < 200; i++)
     {
@@ -350,7 +350,7 @@ int bottle_neck_svc_provider(int argc, char **argv)
     }
 
     // current_state.push_back(obs[0]);
-    kmp_obj.predict_LCNS(current_state, nsa, obs[10], obs, pred, pred_sigma, p, sp);
+    kmp_obj.predict_LCNS(current_state, xi, obs[10], obs, pred, pred_sigma, p, sp);
     kmp_pred = p;
 
     stop = std::chrono::high_resolution_clock::now();

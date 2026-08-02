@@ -136,10 +136,10 @@ public:
         gs.push_back(g1);
         cs << -0.6;
         std::cout << "******************* " << cs.size() << std::endl;
-        kmp_obj.add_constriants(gs, cs);
+        kmp_obj.add_constraints(gs, cs);
         cs.resize(0);
-        Eigen::VectorXd nsa(2);
-        nsa << svc.req.rl_action[0], svc.req.rl_action[1];
+        Eigen::VectorXd xi(2);
+        xi << svc.req.rl_action[0], svc.req.rl_action[1];
 
         int current_index = history_obs.size();
 
@@ -147,7 +147,7 @@ public:
         
         current_state.push_back(obs[current_index]);
         
-        kmp_obj.predict_LCNS(current_state, nsa, obs[current_index], obs, pred, pred_sigma, p, sp);
+        kmp_obj.predict_LCNS(current_state, xi, obs[current_index], obs, pred, pred_sigma, p, sp);
         // std::cout << gs.size() << '\n';
         // std::cout << cs.size() << '\n';
         std::cout << "***************** History size "<< current_index << std::endl;

@@ -1,148 +1,130 @@
-#include <json/json.h>
-#include <iostream>
+#include <chrono>
 #include <fstream>
-#include "gmr.hpp"
-#include "lc-ns-kmp.hpp"
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Eigen>
-#include <Eigen/Core>
-#include <chrono>
+#include <json/json.h>
 
+#include "gmr.hpp"
+#include "lc-ns-kmp.hpp"
 
-
-static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> mu, const std::vector<Eigen::MatrixXd> sigma, std::string file_name)
+static void dump_mu_and_sigma(const std::vector<Eigen::VectorXd> &mu,
+                              const std::vector<Eigen::MatrixXd> &sigma,
+                              const std::string &file_name)
 {
     const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
-    std::string mu_csv_data;
-    std::string mu_file_name = file_name + "_mu.csv";
-    std::ofstream mu_file(mu_file_name.c_str());
-    for (auto m : mu)
+    std::ofstream mu_file((file_name + "_mu.csv").c_str());
+    for (const auto &m : mu)
     {
         mu_file << m.transpose().format(CSVFormat) << std::endl;
     }
 
-    std::string sigma_csv_data;
-    std::string sigma_file_name = file_name + "_sigma.csv";
-    std::ofstream sigma_file(sigma_file_name.c_str());
-    for (auto s : sigma)
+    std::ofstream sigma_file((file_name + "_sigma.csv").c_str());
+    for (const auto &s : sigma)
     {
         sigma_file << s.transpose().format(CSVFormat) << std::endl;
     }
 }
 
+// Axis-aligned box |η_i| ≤ bound encoded as gᵀη + c ≤ 0 with c = -bound.
+static void make_box_constraints(int dim, double bound,
+                                 std::vector<Eigen::VectorXd> &g_list,
+                                 Eigen::VectorXd &c)
+{
+    g_list.clear();
+    c = Eigen::VectorXd::Constant(2 * dim, -bound);
+    for (int i = 0; i < dim; ++i)
+    {
+        Eigen::VectorXd g_pos = Eigen::VectorXd::Zero(dim);
+        Eigen::VectorXd g_neg = Eigen::VectorXd::Zero(dim);
+        g_pos[i] = 1.0;
+        g_neg[i] = -1.0;
+        g_list.push_back(g_pos);
+        g_list.push_back(g_neg);
+    }
+}
 
 int generate_trajectory()
 {
+    // Knobs for this run (edit here; no CLI).
+    struct
+    {
+        std::string model = "../assets/models/model_bottle_neck.json";
+        int dim = 2; // O
+        int N = 500; // horizon
+        double t_max = 1.0;
+        double lambda = 6.0;
+        double beta = 6.0;
+        double l = 2.0;
+        double bound = 6.0; // |η_i| ≤ bound
+        int s_hat_idx = 100;
+        std::string gmm_out = "../examples/gmm";
+        std::string kmp_out = "../examples/kmp";
+    } cfg;
 
-    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
+    Eigen::VectorXd xi = Eigen::VectorXd::Zero(cfg.dim);
+    xi << -25.0, 0.0;
 
+    if (cfg.s_hat_idx < 0 || cfg.s_hat_idx >= cfg.N)
+    {
+        std::cerr << "s_hat_idx out of range [0, N)." << std::endl;
+        return 1;
+    }
 
-    // nbVar/dim must be output_dim + 1 (time). This example uses 2D outputs.
-    std::string model_file_path = "../assets/models/model_bottle_neck.json";
+    std::cout << "Loading GMM from file: " << cfg.model << std::endl;
 
-    std::cout << "Loading GMM from file: " << model_file_path << std::endl;
+    LC_NS_KMP kmp(cfg.dim, cfg.N, cfg.lambda, cfg.beta, cfg.l);
 
-    LC_NS_KMP kmp_obj(2, 500);
-
-    GaussianMixtureRegression gmr; // Create an object of GaussianMixtureRegression
-    int status = gmr.load_gmm(model_file_path);
-
-    if (status != 0)
+    GaussianMixtureRegression gmr;
+    if (gmr.load_gmm(cfg.model) != 0)
     {
         std::cerr << "Error loading GMM." << std::endl;
         return 1;
     }
-    // float upper_lim = 0.1250;
-    // Time normalized to [0, 1] (same as demo CSVs / GMM training).
-    float upper_lim = 1.0f;
 
-    gmr.print_parameters();
-    Eigen::VectorXd time = Eigen::VectorXd::LinSpaced(500, 0.0, upper_lim);
-    std::vector<Eigen::VectorXd> pred;
-    std::vector<Eigen::VectorXd> kmp_pred;
-    std::vector<Eigen::MatrixXd> pred_sigma;
-
-    std::cout << "Time: \n"
-              << time.format(CSVFormat) << "\n";
-    std::vector<Eigen::VectorXd> obs;
-    for (auto t : time)
+    Eigen::VectorXd time = Eigen::VectorXd::LinSpaced(cfg.N, 0.0, cfg.t_max);
+    std::vector<Eigen::VectorXd> s;
+    s.reserve(cfg.N);
+    for (int i = 0; i < cfg.N; ++i)
     {
-        Eigen::VectorXd o = Eigen::VectorXd::Zero(1);
-        o[0] = t;
-        obs.push_back(o);
+        Eigen::VectorXd o(1);
+        o[0] = time[i];
+        s.push_back(o);
     }
-    // for (auto o : obs)
-    // {
-    //     std::cout << o << "\n";
-    // }
-    gmr.print_parameters();
+
+    std::vector<Eigen::VectorXd> mu_gmr;
+    std::vector<Eigen::MatrixXd> Sigma_gmr;
     auto start = std::chrono::high_resolution_clock::now();
-    gmr.run_inference(obs, pred, pred_sigma, 1);
-    std::cout << "Calculated GMR" << std::endl;
-    // for (auto p : pred)
-    // {
-    //     std::cout << p << "\n";
-    // }
+    gmr.run_inference(s, mu_gmr, Sigma_gmr, 1);
     auto stop = std::chrono::high_resolution_clock::now();
-    std::cout << "Time taken: \n"
-              << std::chrono::duration<double, std::milli>(stop - start).count() / 1000 << "\n";
-    std::cout << "Calculated GMR" << std::endl;
+    std::cout << "GMR done in "
+              << std::chrono::duration<double, std::milli>(stop - start).count() / 1000.0
+              << " s\n";
 
-    std::vector<Eigen::VectorXd> p;
-    std::vector<Eigen::MatrixXd> sp;
+    std::vector<Eigen::VectorXd> g_list;
+    Eigen::VectorXd c;
+    make_box_constraints(cfg.dim, cfg.bound, g_list, c);
+    kmp.add_constraints(g_list, c);
 
-    std::vector<Eigen::VectorXd> gs;
-    Eigen::VectorXd cs(4);
-    std::cout << "None created" << std::endl;
-
-    Eigen::VectorXd g1(2);
-    g1 << 1, 0;
-    std::cout << "G1 created" << std::endl;
-
-    Eigen::VectorXd g2(2);
-    g2 << -1, 0;
-    std::cout << "G2 created" << std::endl;
-
-    Eigen::VectorXd g3(2);
-    g3 << 0, 1;
-
-    std::cout << "G3 created" << std::endl;
-    Eigen::VectorXd g4(2);
-    g4 << 0, -1;
-    std::cout << "G4 created" << std::endl;
-
-    gs.push_back(g1);
-    gs.push_back(g2);
-    gs.push_back(g3);
-    gs.push_back(g4);
-    std::cout << "Gs created" << std::endl;
-    // Loose box |x|,|y| <= 6 so NSA can push past the GMR mean (demos ~[0.2,0.8]x[0.1,1]).
-    // Tighten (e.g. cs << -0.6, ...) to see the QP clamp the excursion.
-    cs << -6, -6, -6, -6;
-    std::cout << "Cs created" << std::endl;
-    kmp_obj.add_constriants(gs, cs);
-    std::cout << "Constraints added" << std::endl;
-    // Non-zero null-space action: this is what moves KMP beyond the demonstrated mean.
-    Eigen::VectorXd nsa(2);
-    nsa << 0, 0;
-    std::cout << "Nsa created" << std::endl;
-    kmp_obj.predict_LCNS(obs, nsa, obs[10], obs, pred, pred_sigma, p, sp);
-    kmp_pred = p;
-    std::cout << "KMP Prediction done" << std::endl;
+    std::vector<Eigen::VectorXd> eta_kmp;
+    std::vector<Eigen::MatrixXd> Sigma_kmp;
+    start = std::chrono::high_resolution_clock::now();
+    kmp.predict_LCNS(s, xi, s[cfg.s_hat_idx], s, mu_gmr, Sigma_gmr, eta_kmp, Sigma_kmp);
     stop = std::chrono::high_resolution_clock::now();
-    std::cout << "Time taken: \n"
-              << std::chrono::duration<double, std::milli>(stop - start).count() / 1000 << "\n";
-    std::string file_name = "../examples/gmm";
+    std::cout << "KMP done in "
+              << std::chrono::duration<double, std::milli>(stop - start).count() / 1000.0
+              << " s\n";
 
-    dump_mu_and_sigma(pred, pred_sigma, file_name);
-    file_name = "../examples/kmp";
-
-    dump_mu_and_sigma(kmp_pred, pred_sigma, file_name);
+    dump_mu_and_sigma(mu_gmr, Sigma_gmr, cfg.gmm_out);
+    dump_mu_and_sigma(eta_kmp, Sigma_gmr, cfg.kmp_out);
     return 0;
 }
 
-
-int main(int argc, char **argv)
+int main()
 {
-    generate_trajectory();
+    return generate_trajectory();
 }
